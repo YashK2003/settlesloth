@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: settlesloth
+    runtime: node
+    plan: free
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: GEMMA_MODEL
+        value: gemma-4-26b-a4b-it
+      - key: GEMINI_TIMEOUT_MS
+        value: "90000"
+      - key: GEMINI_API_KEY
+        sync: false

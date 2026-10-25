@@ -1,0 +1,78 @@
+/* SettleSloth - "Night Canopy & Amber Ledger" Custom Styles */
+
+:root {
+  --bg-canopy: #090d16;
+  --bg-surface: #111827;
+  --bg-card: #162032;
+  --border-subtle: #1e293b;
+  --amber-glow: rgba(245, 158, 11, 0.15);
+}
+
+body {
+  background-color: var(--bg-canopy);
+  color: #e2e8f0;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0b0f19;
+}
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* Amber Quarantine Glow */
+.amber-glow-card {
+  box-shadow: 0 0 20px var(--amber-glow);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+/* Monospace numerals for financial precision */
+.font-mono-numbers {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Pulse indicator dot */
+@keyframes subtle-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.95); }
+}
+
+.pulse-dot {
+  animation: subtle-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Transition utility */
+.smooth-transition {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Spinner animation for active inference */
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 1.2s linear infinite;
+}
+
+/* Keyboard accessibility: Visible focus outlines */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+a:focus-visible {
+  outline: 2px solid #f59e0b !important;
+  outline-offset: 2px !important;
+}

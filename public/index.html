@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SettleSloth — Deterministic Group-Chat Expense Reconciler</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22><text y=%2226%22 font-size=%2226%22>🦥</text></svg>">
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            canopy: '#090d16',
+            surface: '#111827',
+            card: '#162032',
+            amberLedger: '#f59e0b',
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-canopy text-slate-100 min-h-screen flex flex-col font-sans antialiased selection:bg-amber-500 selection:text-black">
+
+  <!-- Navigation / Header -->
+  <header class="border-b border-slate-800/80 bg-surface/90 backdrop-blur sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-2xl shadow-inner">
+          🦥
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-xl font-bold tracking-tight text-white">SettleSloth</h1>
+            <span class="text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              Open-Weight AI + Deterministic Math
+            </span>
+          </div>
+          <p class="text-xs text-slate-400">
+            Gemma extracts from messy group chats. Deterministic JavaScript guarantees verified balances.
+          </p>
+        </div>
+      </div>
+
+      <!-- Engine Status & Badges -->
+      <div class="flex items-center gap-3 text-xs">
+        <div id="engineStatusBadge" class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/90 border border-slate-700/60">
+          <span id="engineStatusDot" class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span>
+          <span id="engineStatusText" class="text-slate-300 font-medium">Deterministic Local Engine</span>
+        </div>
+
+        <div id="latencyBadge" class="hidden sm:flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800/60 border border-slate-700/40 text-slate-400 font-mono-numbers">
+          <span class="text-slate-500">⏱️</span>
+          <span id="latencyValue">0</span> ms
+        </div>
+
+        <a href="/api/health" target="_blank" rel="noopener noreferrer" class="hidden md:inline-flex items-center text-slate-400 hover:text-amber-400 text-xs transition-colors">
+          /api/health ↗
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main 2-Column Responsive Workspace -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+    <!-- LEFT COLUMN: Input & Controls (5 Cols) -->
+    <section class="lg:col-span-5 flex flex-col gap-5">
+      <div class="bg-surface rounded-2xl border border-slate-800 p-5 shadow-xl flex flex-col gap-4">
+
+        <!-- One-Click Preset Bar -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <label class="text-xs font-semibold uppercase tracking-wider text-slate-400">
+              One-Click Chat Presets
+            </label>
+            <span class="text-[11px] text-slate-500">Real ground-truth test data</span>
+          </div>
+          <div id="presetButtonsContainer" class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <button type="button" data-preset="goa-trip" class="preset-btn text-left p-2.5 rounded-xl border border-slate-700/70 bg-slate-800/50 hover:bg-slate-800 hover:border-amber-500/50 transition-all text-xs focus:outline-none focus:ring-2 focus:ring-amber-500">
+              <span class="block font-semibold text-amber-400">🌴 Goa Trip</span>
+              <span class="text-[10px] text-slate-400 block truncate">12 msgs · Hinglish · 2.4k</span>
+            </button>
+            <button type="button" data-preset="bengaluru-flatmates" class="preset-btn text-left p-2.5 rounded-xl border border-slate-700/70 bg-slate-800/50 hover:bg-slate-800 hover:border-amber-500/50 transition-all text-xs focus:outline-none focus:ring-2 focus:ring-amber-500">
+              <span class="block font-semibold text-emerald-400">🏠 Flatmates</span>
+              <span class="text-[10px] text-slate-400 block truncate">10 msgs · Rent · Maid</span>
+            </button>
+            <button type="button" data-preset="hackathon-run" class="preset-btn text-left p-2.5 rounded-xl border border-slate-700/70 bg-slate-800/50 hover:bg-slate-800 hover:border-amber-500/50 transition-all text-xs focus:outline-none focus:ring-2 focus:ring-amber-500">
+              <span class="block font-semibold text-cyan-400">💻 Hackathon</span>
+              <span class="text-[10px] text-slate-400 block truncate">8 msgs · Pizza · RedBull</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Provider Selection & Simulation Controls -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-800/80">
+          <div>
+            <label for="providerModeSelect" class="block text-xs font-semibold text-slate-400 mb-1">
+              Inference Provider
+            </label>
+            <select id="providerModeSelect" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500">
+              <option value="auto">Auto (Gemma Cloud → Ollama → Local)</option>
+              <option value="fallback" selected>Deterministic Local Engine (Offline)</option>
+              <option value="google">Google AI Studio (Gemma 4 26B Cloud)</option>
+              <option value="ollama">Local Ollama (localhost:11434)</option>
+            </select>
+          </div>
+
+          <div class="flex flex-col justify-end">
+            <label class="flex items-center gap-2 p-1.5 rounded-lg border border-slate-800 bg-slate-900/60 hover:bg-slate-900 cursor-pointer transition-colors text-xs text-slate-300">
+              <input type="checkbox" id="simulateHallucinationCheckbox" class="rounded bg-slate-800 border-slate-700 text-amber-500 focus:ring-amber-500 focus:ring-offset-slate-900">
+              <span class="select-none font-medium text-rose-300">Simulate Hallucination</span>
+            </label>
+            <span class="text-[10px] text-slate-500 px-1 mt-0.5">Tests QuoteGuard rejection in red</span>
+          </div>
+        </div>
+
+        <!-- Chat Transcript Textarea -->
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label for="chatInput" class="text-xs font-semibold uppercase tracking-wider text-slate-400">
+              Group Chat Messages (WhatsApp / Telegram)
+            </label>
+            <button id="clearChatBtn" type="button" class="text-[11px] text-slate-500 hover:text-slate-300 transition-colors">
+              Clear
+            </button>
+          </div>
+          <textarea id="chatInput" rows="12" placeholder="Paste your group chat dump here...
+Example:
+Rahul: Paid 1500 for airport cab
+Priya: Lunch was 1800, paid by card
+Neha: Got snacks for 850
+Rahul: Paid 2.4k for beach dinner
+Priya: Paid 4000 for scuba, don't count Aman
+Aman: I sent Rahul 500 on GPay
+Neha: Maybe 350 for scooter petrol? Need to check receipt" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3.5 text-xs text-slate-200 font-mono-numbers focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 leading-relaxed transition-all placeholder:text-slate-600"></textarea>
+          <div class="flex justify-between items-center text-[10px] text-slate-500 mt-1 px-1">
+            <span id="charCountLabel">0 characters</span>
+            <span>Quotes verified verbatim before balance math</span>
+          </div>
+        </div>
+
+        <!-- Action Button -->
+        <div class="flex items-center gap-3 pt-1">
+          <button id="reconcileBtn" type="button" class="flex-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 px-4 rounded-xl text-sm transition-all duration-150 flex items-center justify-center gap-2 shadow-lg shadow-amber-500/10 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 focus:ring-offset-surface">
+            <span id="reconcileBtnIcon" class="text-base">🦥</span>
+            <span id="reconcileBtnText">Let the Sloth Settle It</span>
+          </button>
+        </div>
+
+        <!-- Active Inference Loading Card (Shown while request is running) -->
+        <div id="loadingCard" class="hidden p-4 rounded-xl bg-amber-950/25 border border-amber-500/40 shadow-lg flex flex-col gap-2.5 transition-all" role="status" aria-live="polite">
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <div class="flex items-center gap-2.5">
+              <span id="loadingSpinner" class="w-4 h-4 border-2 border-amber-400 border-t-transparent rounded-full animate-spin-slow"></span>
+              <span id="loadingTitle" class="text-xs font-bold text-amber-300">
+                AI Extraction in Progress...
+              </span>
+            </div>
+            <!-- Honest elapsed seconds display -->
+            <div id="elapsedTimeBadge" class="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-900/90 border border-amber-500/30 text-amber-300 font-mono-numbers text-xs">
+              <span>⏱️</span>
+              <span id="elapsedSeconds">0</span>s elapsed
+            </div>
+          </div>
+          <p id="loadingDescription" class="text-[11px] text-slate-300 leading-relaxed">
+            Gemma extracts structured claims from the chat transcript. Deterministic JavaScript then verifies source quotes with QuoteGuard and performs all balance arithmetic.
+          </p>
+          <div class="flex items-center gap-2 text-[10px] text-amber-400/80 bg-slate-950/60 px-2.5 py-1.5 rounded-lg border border-amber-500/20">
+            <span>🔒</span>
+            <span>Duplicate submissions locked. Deterministic QuoteGuard will verify all quotes upon arrival.</span>
+          </div>
+        </div>
+
+        <!-- Error Alert Container -->
+        <div id="errorAlert" class="hidden p-3.5 rounded-xl bg-rose-950/60 border border-rose-500/40 text-xs text-rose-200 transition-all" role="alert">
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex items-start gap-2 flex-1">
+              <span class="text-rose-400 font-bold text-sm">⚠️</span>
+              <div class="flex-1">
+                <span id="errorMessage" class="block font-semibold"></span>
+                <span id="errorHint" class="block text-[11px] text-rose-300/80 mt-1"></span>
+              </div>
+            </div>
+            <button id="retryBtn" type="button" class="shrink-0 px-3 py-1 bg-rose-900/70 hover:bg-rose-800 text-rose-100 border border-rose-500/50 rounded-lg text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-rose-400">
+              Retry
+            </button>
+          </div>
+        </div>
+
+        <!-- Service / Readiness Status Notice -->
+        <div class="pt-3 border-t border-slate-800 text-[11px] text-slate-500 text-center">
+          <p>SettleSloth is running. Visit <a href="/api/health" class="text-slate-400 underline hover:text-amber-400">/api/health</a> to check service status.</p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- RIGHT COLUMN: Workbench Results (7 Cols) -->
+    <section class="lg:col-span-7 flex flex-col gap-5">
+
+      <!-- Initial Empty State -->
+      <div id="emptyState" class="bg-surface rounded-2xl border border-slate-800 p-10 text-center flex flex-col items-center justify-center min-h-[480px]">
+        <div class="w-16 h-16 rounded-2xl bg-slate-800/80 border border-slate-700/60 flex items-center justify-center text-3xl mb-4 text-amber-400 shadow-inner">
+          ⚖️
+        </div>
+        <h3 class="text-base font-semibold text-white mb-2">No Expenses Reconciled Yet</h3>
+        <p class="text-xs text-slate-400 max-w-md mx-auto mb-6 leading-relaxed">
+          Select one of the 3 presets on the left or paste your chaotic WhatsApp chat. SettleSloth extracts expense claims, isolates unconfirmed items, and calculates minimum settlement transfers.
+        </p>
+        <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-400">
+          <span>💡 Tip:</span>
+          <span>Click <strong class="text-amber-400">🌴 Goa Trip</strong> to see Hinglish parsing &amp; QuoteGuard in action.</span>
+        </div>
+      </div>
+
+      <!-- Results View (Hidden until reconciled) -->
+      <div id="resultsContainer" class="hidden flex flex-col gap-5">
+
+        <!-- 0. Provider & Model Audit Badge -->
+        <div id="providerAuditBadge" class="p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-md transition-all">
+          <div class="flex items-start sm:items-center gap-3">
+            <span id="providerAuditIcon" class="text-xl">✨</span>
+            <div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <span id="providerAuditName" class="font-bold text-white text-sm"></span>
+                <span id="providerAuditTag" class="px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider font-semibold"></span>
+              </div>
+              <p id="providerAuditDetail" class="text-xs text-slate-300 mt-1 leading-relaxed"></p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 sm:self-center shrink-0">
+            <div id="providerAuditLatency" class="px-3 py-1.5 rounded-lg bg-slate-900/90 border border-slate-700/60 font-mono-numbers text-xs text-slate-300">
+              ⏱️ <span id="providerAuditLatencyVal">0</span> ms
+            </div>
+          </div>
+        </div>
+
+        <!-- 1. Lazy Payoff Banner -->
+        <div class="bg-gradient-to-r from-amber-950/30 via-slate-900 to-emerald-950/30 rounded-2xl border border-slate-800 p-4 shadow-lg">
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+            <div class="p-2 rounded-xl bg-slate-900/60 border border-slate-800/80">
+              <span class="block text-[10px] uppercase font-bold tracking-wider text-slate-400">Chaotic Messages</span>
+              <span id="metricRawCount" class="text-lg font-bold text-white font-mono-numbers">0</span>
+            </div>
+            <div class="p-2 rounded-xl bg-slate-900/60 border border-slate-800/80">
+              <span class="block text-[10px] uppercase font-bold tracking-wider text-emerald-400">Total Spend</span>
+              <span id="metricTotalSpend" class="text-lg font-bold text-emerald-400 font-mono-numbers">₹0.00</span>
+            </div>
+            <div class="p-2 rounded-xl bg-slate-900/60 border border-slate-800/80">
+              <span class="block text-[10px] uppercase font-bold tracking-wider text-amber-400">Min. Transfers</span>
+              <span id="metricTransfersCount" class="text-lg font-bold text-amber-400 font-mono-numbers">0</span>
+            </div>
+            <div class="p-2 rounded-xl bg-slate-900/60 border border-slate-800/80">
+              <span class="block text-[10px] uppercase font-bold tracking-wider text-cyan-400">Time Saved</span>
+              <span id="metricTimeSaved" class="text-lg font-bold text-cyan-400 font-mono-numbers">~0 mins</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. Minimum Settlement Plan -->
+        <div class="bg-surface rounded-2xl border border-slate-800 p-5 shadow-xl flex flex-col gap-4">
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <h2 class="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-2">
+                <span>🤝</span> Minimum Settlement Plan
+              </h2>
+              <p class="text-xs text-slate-400">Fewest transfers needed to settle all balances to exact zero.</p>
+            </div>
+            <button id="copySummaryBtn" type="button" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex items-center gap-1.5 transition-all shadow-md focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <span>📋</span>
+              <span id="copySummaryText">Copy WhatsApp Summary</span>
+            </button>
+          </div>
+
+          <!-- Transfers Cards Container -->
+          <div id="transfersList" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <!-- Dynamically populated -->
+          </div>
+
+          <!-- Participant Net Balance Summary Pills -->
+          <div class="pt-3 border-t border-slate-800/80">
+            <span class="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-2">
+              Final Net Balances (Zero-Sum Verified)
+            </span>
+            <div id="balancesList" class="flex flex-wrap gap-2">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. Amber "Needs Checking" Quarantine Box -->
+        <div id="quarantineSection" class="hidden bg-amber-950/20 rounded-2xl amber-glow-card p-5 flex flex-col gap-3">
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+              <span class="text-amber-400 text-lg">⚠️</span>
+              <div>
+                <h3 class="text-sm font-bold text-amber-300">Needs Checking (Quarantined Claims)</h3>
+                <p class="text-xs text-amber-200/70">
+                  Uncertain expenses are excluded from settlement math until explicitly confirmed.
+                </p>
+              </div>
+            </div>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+              0ms Math Update
+            </span>
+          </div>
+
+          <div id="quarantinedItemsList" class="flex flex-col gap-2.5">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+        <!-- 4. Verified Expense & Repayment Ledger -->
+        <div class="bg-surface rounded-2xl border border-slate-800 p-5 shadow-xl flex flex-col gap-3">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-2">
+              <span>📖</span> Verified Expense &amp; Repayment Ledger
+            </h2>
+            <span id="verifiedItemsBadge" class="text-xs font-mono px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              0 Verified
+            </span>
+          </div>
+
+          <div class="overflow-x-auto rounded-xl border border-slate-800/80">
+            <table class="w-full text-left text-xs border-collapse">
+              <thead class="bg-slate-900/80 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
+                <tr>
+                  <th class="py-2.5 px-3">Type</th>
+                  <th class="py-2.5 px-3">Payer</th>
+                  <th class="py-2.5 px-3">Description &amp; Quote</th>
+                  <th class="py-2.5 px-3">Beneficiaries</th>
+                  <th class="py-2.5 px-3 text-right">Amount</th>
+                </tr>
+              </thead>
+              <tbody id="verifiedTableBody" class="divide-y divide-slate-800/60 font-sans">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 5. Anti-Hallucination Audit Log -->
+        <div id="auditLogSection" class="bg-surface rounded-2xl border border-slate-800 p-5 shadow-xl flex flex-col gap-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="text-base">🛡️</span>
+              <h2 class="text-sm font-bold uppercase tracking-wider text-white">
+                QuoteGuard &amp; ParticipantGuard Audit Log
+              </h2>
+            </div>
+            <div class="flex items-center gap-2 text-[10px]">
+              <span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono">
+                Active Verification
+              </span>
+            </div>
+          </div>
+
+          <div id="blockedHallucinationsContainer">
+            <!-- Dynamically populated: Empty state or red blocked cards -->
+            <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-800/80 text-xs text-slate-400 flex items-center gap-2">
+              <span class="text-emerald-400">✓</span>
+              <span>All claims in current ledger verified verbatim against original chat messages.</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-800/80 py-4 text-center text-xs text-slate-500">
+    <p>SettleSloth &copy; 2026 Hacktoberfest Week 3 "Slow and Steady" &middot; Built with open-weight Gemma &amp; Deterministic Math.</p>
+  </footer>
+
+  <!-- Frontend Logic -->
+  <script src="app.js"></script>
+</body>
+</html>
